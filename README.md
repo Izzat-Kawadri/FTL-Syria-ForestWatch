@@ -35,12 +35,6 @@ FAOSTAT data (optional — local CSVs work fine without it):
 World Bank CCKP (CRU climate) needs no key; build.py tries both the legacy
 `/api/v1/` and the documented `/cckp/v1/` endpoint shapes.
 
-## Host on GitHub Pages
-
-- Option A: commit everything → Settings → Pages → Deploy from branch → `main` / `/docs`.
-- Option B (auto-build): Settings → Pages → Source: _GitHub Actions_. The workflow
-  runs `python build.py` on every push — the local `data/` files make it robust
-  even if the FAOSTAT API is down or unauthenticated.
 
 ## Hackathon deliverables (all in this repo)
 
