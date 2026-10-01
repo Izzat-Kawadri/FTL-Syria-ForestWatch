@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syria ForestWatch — Forestry & Climate Dashboard</title>
+<meta name="description" content="Python-built dashboard on forest cover, forest emissions, wood production, temperature and precipitation in Syria, 1990–2025.">
+<script src="vendor/plotly.min.js"></script>
+<script>window.Plotly||document.write('<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"><\/script>')</script>
+<style>
+:root{--bg:#f6f8f5;--card:#fff;--tx:#17251c;--mut:#5d6b61;--ac:#2f7d4f;--ac2:#d9822b;--bd:#dfe6df;--warn:#fff4e0}
+@media(prefers-color-scheme:dark){:root{--bg:#101612;--card:#18211b;--tx:#e8efe9;--mut:#9aa89e;--ac:#5cc58a;--ac2:#f0a04b;--bd:#27342b;--warn:#3a2f18}}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:60px}
+body{margin:0;font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx)}
+nav{position:sticky;top:0;z-index:9;background:var(--card);border-bottom:1px solid var(--bd);display:flex;gap:4px;overflow-x:auto;padding:8px 14px;align-items:center}
+nav b{margin-right:10px;white-space:nowrap}nav a{color:var(--mut);text-decoration:none;padding:4px 10px;border-radius:14px;font-size:14px;white-space:nowrap}nav a:hover{background:var(--bd);color:var(--tx)}
+header{padding:48px 20px 28px;max-width:1100px;margin:auto}h1{font-size:clamp(26px,5vw,42px);line-height:1.15;margin:0 0 10px}
+.sub{color:var(--mut);max-width:760px}main{max-width:1100px;margin:auto;padding:0 20px 60px}
+section{margin-top:44px}h2{font-size:26px;margin:0 0 6px}h2+p.lead{color:var(--mut);margin-top:0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:14px 0}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.kpi .v{font-size:30px;font-weight:700;color:var(--ac)}.kpi .l{font-size:13px;color:var(--mut)}.kpi .d{font-size:13px}
+.ctrl{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px;font-size:14px}
+select,input[type=range]{font:inherit;padding:5px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+.banner{background:var(--warn);border:1px solid var(--ac2);border-radius:10px;padding:10px 14px;margin:14px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:7px 9px;border-bottom:1px solid var(--bd);text-align:left}th{color:var(--mut);font-weight:600}
+.tag{display:inline-block;background:var(--bd);border-radius:10px;padding:1px 9px;font-size:12px;margin:2px}
+ul{padding-left:20px}li{margin:4px 0}.ok{color:var(--ac)}.scroll{overflow-x:auto}
+footer{border-top:1px solid var(--bd);padding:24px 20px;text-align:center;color:var(--mut);font-size:14px}
+a{color:var(--ac)}.fig{max-width:100%;border-radius:10px;border:1px solid var(--bd)}
+code{background:var(--bd);border-radius:6px;padding:1px 6px;font-size:13px}
+</style></head><body>
+<nav><b>🌲 Syria ForestWatch</b><a href="#problem">Problem</a><a href="#data">Data</a><a href="#overview">Overview</a><a href="#analysis">Notebook analysis</a><a href="#explorer">Explorer</a><a href="#corr">Correlation</a><a href="#thresh">Thresholds</a><a href="#wood">Wood</a><a href="#findings">Findings</a><a href="#solution">Solution</a><a href="#limits">Limitations</a><a href="#checklist">Checklist</a><a href="#refs">References</a></nav>
+<header>
+<p class="tag">FTL AI4Climate · Python for Climate Hackathon · Group 3</p>
+<h1>Assessing the Interplay Between Forestry Dynamics and Climate Change in Syria (1990–2025)</h1>
+<p class="sub">An interactive dashboard, built end-to-end with Python, linking CRU temperature &amp; precipitation with FAOSTAT forest land, tree cover, wood production and forest emissions.</p>
+<div id="err"></div><div id="demo"></div><div id="src" class="tag"></div><div class="grid" id="kpis"></div>
+</header>
+<main>
+<section id="problem"><h2>1 · Climate problem &amp; research question</h2>
+<div class="card"><h3>Problem statement</h3>
+<p>Syria has experienced notable shifts in climatic conditions alongside severe environmental pressures and land-use transitions over recent decades. Changes in forest cover and tree-covered areas alter carbon sink capacities and localized climate resilience, while rising temperatures (mean, max and min) and fluctuating precipitation accelerate forest degradation. Understanding the bidirectional relationship between forestry dynamics (forest land cover, tree canopy area, wood production, forest emissions) and climate parameters is vital for regional environmental sustainability.</p>
+<h3>Main research question</h3>
+<p><b>To what extent do historical changes in Syria's forest cover and forestry emissions (1990–2025) correlate with long-term trends in regional temperature and precipitation?</b></p>
+<p><span class="tag">SDG 13 Climate Action</span><span class="tag">SDG 15 Life on Land</span></p></div></section>
+
+<section id="data"><h2>2 · Datasets &amp; Python approach</h2>
+<div class="grid">
+<div class="card"><h3>Data</h3><ul>
+<li><b>CRU TS 4.10</b> (via World Bank CCKP API): annual mean / max / min temperature and precipitation, 1901–2025.</li>
+<li><b>FAOSTAT Land Use</b>: forest land, planted forest (1000 ha), 1990–2025.</li>
+<li><b>FAOSTAT Land Cover</b>: woody crops, tree-covered areas (1000 ha), 1992–2022.</li>
+<li><b>FAOSTAT Emissions from Forests</b>: forestland net emissions (kt CO2, FAO Tier 1), 1990–2025.</li>
+<li><b>FAOSTAT Forestry Production</b>: roundwood, industrial roundwood, wood fuel, sawlogs, sawnwood, 1961–2024.</li></ul></div>
+<div class="card"><h3>Python pipeline (<code>build.py</code>) — with the API authentication fix</h3><ol>
+<li><b>Import</b> xlsx/csv with pandas; <b>inspect &amp; clean</b>: filter Syria, pivot items, align on Year.</li>
+<li><b>Live APIs first</b>: World Bank CCKP (both <code>/api/v1</code> and <code>/cckp/v1</code> URL shapes) and FAOSTAT.</li>
+<li><b>FAOSTAT JWT fix</b>: the API now rejects anonymous calls. <code>build.py</code> obtains a Bearer token with a free FAOSTAT account (<code>FAOSTAT_USER</code>/<code>FAOSTAT_PASSWORD</code> env vars), caches it 50 min, and tries api/v1 → api/v2.</li>
+<li><b>Resilient fallback chain</b> for every source: live API → cached API copy → local file in <code>data/</code>.</li>
+<li><b>Analyse</b>: mean/min/max, % change, CAGR, linear trend + R²/p, period comparison, rolling means, threshold detection, Pearson correlation + detrended (year-on-year) check.</li>
+<li><b>Visualise &amp; publish</b>: Plotly dashboard + notebook-style figures → static HTML for GitHub Pages.</li></ol></div></div></section>
+
+<section id="overview"><h2>3 · Climate overview</h2><p class="lead">Dashed line = linear trend, red line = 10-year rolling mean, dotted = threshold used in the team notebooks.</p>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(420px,1fr))" id="climgrid"></div></section>
+
+<section id="analysis"><h2>3b · Notebook analysis outputs (Python / matplotlib)</h2>
+<p class="lead">Figures produced by the team's analysis notebooks from the same datasets. Source: <code>figs/</code> generated by <code>build.py</code>.</p>
+<div class="grid">
+<div class="card"><h3>CRU climate time series 1901–2025</h3><img class="fig" src="figs/climate_overview.png" onerror="this.closest('.card').style.display='none'" alt="Climate overview"></div>
+<div class="card"><h3>Forest &amp; land-cover indicators</h3><img class="fig" src="figs/forest_land_panels.png" onerror="this.closest('.card').style.display='none'" alt="Forest land panels"></div>
+<div class="card"><h3>Forestland net emissions</h3><img class="fig" src="figs/forest_emissions.png" onerror="this.closest('.card').style.display='none'" alt="Forest emissions"></div>
+<div class="card"><h3>Wood production by item</h3><img class="fig" src="figs/wood_production.png" onerror="this.closest('.card').style.display='none'" alt="Wood production"></div>
+<div class="card"><h3>Wood year-on-year change &amp; comparison</h3><img class="fig" src="figs/wood_yoy_comparison.png" onerror="this.closest('.card').style.display='none'" alt="Wood YoY"></div>
+<div class="card"><h3>Correlation heatmaps (raw vs detrended)</h3><img class="fig" src="figs/correlation_heatmaps.png" onerror="this.closest('.card').style.display='none'" alt="Correlations"></div>
+<div class="card"><h3>Forest land vs temperature scatter</h3><img class="fig" src="figs/scatter_forest_tas.png" onerror="this.closest('.card').style.display='none'" alt="Scatter"></div>
+</div></section>
+
+<section id="explorer"><h2>4 · Time-series explorer</h2>
+<div class="card"><div class="ctrl"><label>Variable <select id="v1"></select></label><label>Compare with <select id="v2"></select></label>
+<label>From <span id="y0l"></span><input type="range" id="y0"></label><label>To <span id="y1l"></span><input type="range" id="y1"></label>
+<label>Rolling <select id="win"><option>3</option><option selected>5</option><option>10</option></select> yr</label>
+<label><input type="checkbox" id="tr" checked> trend</label><label><input type="checkbox" id="th" checked> threshold</label><label><input type="checkbox" id="pc"> period averages</label></div>
+<div id="exp" style="height:420px"></div><div class="scroll" id="expstats"></div></div></section>
+
+<section id="corr"><h2>5 · Forest ↔ climate correlation</h2><p class="lead">Pearson r on the selected year range. “Year-on-year changes” removes shared long-term trends, which otherwise create spurious correlations.</p>
+<div class="card"><div class="ctrl"><label><input type="checkbox" id="dt"> use year-on-year changes (detrended)</label><label>Scatter X <select id="sx"></select></label><label>Y <select id="sy"></select></label></div>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(420px,1fr))"><div id="heat" style="height:440px"></div><div id="sc" style="height:440px"></div></div></div></section>
+
+<section id="thresh"><h2>6 · Threshold detection &amp; period comparison</h2><div class="card scroll" id="thtab"></div>
+<p class="lead">Periods compared: <span id="pp"></span>. Thresholds are the values defined in the team's notebooks (e.g. 200 mm = drought, 19.5 °C = heat flag).</p></section>
+
+<section id="wood"><h2>7 · Wood production</h2><div class="card"><div class="ctrl"><label>Item <select id="wsel"></select></label></div><div id="wchart" style="height:380px"></div><p id="wnote" class="lead"></p></div></section>
+
+<section id="findings"><h2>8 · Main findings</h2><div class="card"><ul id="finds"></ul></div>
+<div class="card"><b>Answer to the research question.</b> <span id="ans"></span></div></section>
+
+<section id="solution"><h2>9 · Proposed solution &amp; impact</h2>
+<div class="grid">
+<div class="card"><h3>🛰️ Forest–Climate Monitoring Dashboard</h3><p>This open, reproducible dashboard is the first layer: one Python command refreshes every number and chart when new FAOSTAT/CRU releases arrive, so planners can track forest and climate indicators together.</p></div>
+<div class="card"><h3>⚠️ Early-warning flags</h3><p>Threshold detection (drought &lt; 200 mm, heat &gt; 19.5 °C mean) can be automated into annual risk flags that mark years when forests are most exposed.</p></div>
+<div class="card"><h3>🌱 Decision support</h3><p>Pair drought-risk years with planting and protection priorities: drought-tolerant species for planted forests and woody crops, fire-risk preparedness after dry, hot years.</p></div>
+<div class="card"><h3>🤖 Next: AI model</h3><p>Add satellite tree-cover loss (Global Forest Watch) and fit a regression / random-forest model to predict next-year forest stress from climate indicators.</p></div></div>
+<div class="card"><h3>Impact</h3><ul><li>Gives researchers, NGOs and local authorities a transparent evidence base for forest and climate-resilience planning.</li><li>Supports <b>SDG 13</b> (climate action) and <b>SDG 15</b> (terrestrial ecosystems).</li><li>Fully open: code, data links and method are public and reusable for other countries.</li></ul></div></section>
+
+<section id="limits"><h2>10 · Limitations &amp; next steps</h2><div class="card"><ul>
+<li><b>Correlation ≠ causation.</b> Trending series (forest area, temperature) correlate by construction; the detrended view is the fairer test.</li>
+<li><b>Small sample.</b> ~36 annual points; forest area and emissions in FAOSTAT are modelled (FAO Tier 1) and change in steps or straight lines, not observed annually.</li>
+<li><b>National averages.</b> CRU is a country mean; local forest–climate effects (coastal mountains vs steppe) are hidden.</li>
+<li><b>Conflict-period data quality.</b> Statistics for 2011 onwards may rely on estimates.</li>
+<li><b>Next:</b> sub-national climate data, satellite tree-cover loss, fire data, lagged and multivariate models, forecasting.</li></ul></div></section>
+
+<section id="checklist"><h2>11 · Hackathon requirements checklist</h2><div class="card scroll"><table>
+<tr><th>Requirement</th><th>Where it is covered</th><th></th></tr>
+<tr><td>Problem statement &amp; one research question</td><td>§1</td><td class="ok">✔</td></tr>
+<tr><td>Credible, referenced datasets</td><td>§2, References</td><td class="ok">✔</td></tr>
+<tr><td>Python: variables, functions, loops, conditions</td><td><code>build.py</code>, notebooks</td><td class="ok">✔</td></tr>
+<tr><td>Import, inspect, clean/prepare, explain variables</td><td>§2, <code>build.py</code> steps 1–2</td><td class="ok">✔</td></tr>
+<tr><td>≥ 3 analyses (averages, min/max, % change, period comparison, thresholds, correlation, ranking)</td><td>§3–§7 (all of them)</td><td class="ok">✔</td></tr>
+<tr><td>Visualisation</td><td>Interactive Plotly + matplotlib notebook figures</td><td class="ok">✔</td></tr>
+<tr><td>Findings &amp; interpretation</td><td>§8</td><td class="ok">✔</td></tr>
+<tr><td>Proposed solution / impact</td><td>§9</td><td class="ok">✔</td></tr>
+<tr><td>Limitations &amp; next steps</td><td>§10</td><td class="ok">✔</td></tr>
+<tr><td>Live API with authentication handling + fallback</td><td><code>build.py</code> (JWT Bearer token, cache, local fallback)</td><td class="ok">✔</td></tr>
+<tr><td>Submit: notebook, dataset link, ≤ 7 slides, short summary, Colab/GitHub link</td><td>Repo + this page</td><td class="ok">✔</td></tr></table></div></section>
+
+<section id="refs"><h2>12 · References</h2><div class="card"><ol>
+<li>Harris, I., Osborn, T.J., Jones, P., Lister, D. (2020). Version 4 of the CRU TS monthly high-resolution gridded multivariate climate dataset. <i>Scientific Data</i> 7, 109.</li>
+<li>World Bank Climate Change Knowledge Portal — CRU TS country time-series, Syrian Arab Republic. <a href="https://climateknowledgeportal.worldbank.org">climateknowledgeportal.worldbank.org</a></li>
+<li>FAO. FAOSTAT: Land Use; Land Cover; Emissions from Forests; Forestry Production and Trade. <a href="https://www.fao.org/faostat/">fao.org/faostat</a> (API access requires a free FAOSTAT account — see build.py).</li>
+<li>FTL Syria AI4Climate — Python for Climate Hackathon brief (2026).</li>
+<li>Python libraries: pandas, NumPy, SciPy, Matplotlib, Plotly.</li></ol></div></section>
+</main>
+<footer>Group 3 · FTL AI4Climate Python Hackathon 2026 · <a href="merged_dataset.csv" download>Download merged dataset (CSV)</a> · Built with Python (<code>build.py</code>)</footer>
+
+<script>
+window.addEventListener('error',e=>{const b=document.getElementById('err');if(b)b.innerHTML='<div class="banner"><b>Dashboard error:</b> '+e.message+'</div>'});
+const P={"demo":false,"source":"Data: REAL — CRU TS 4.10 (World Bank CCKP) + FAOSTAT (Land Use, Land Cover, Emissions from Forests, Forestry Production) · built 2026-10-01","years":[1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025],
+"meta":{"tas":["Mean temperature (tas)","°C","Climate"],"tasmax":["Max temperature (tasmax)","°C","Climate"],"tasmin":["Min temperature (tasmin)","°C","Climate"],"pr":["Precipitation (pr)","mm","Climate"],"forest_land":["Forest land area","1000 ha","Forest"],"planted":["Planted forest area","1000 ha","Forest"],"woody":["Woody crops area","1000 ha","Forest"],"tree_cover":["Tree-covered areas","1000 ha","Forest"],"net_emis":["Forestland net emissions","kt CO2e","Emissions"],"wood|Roundwood":["Wood: Roundwood","m³","Wood production"],"wood|Industrial roundwood":["Wood: Industrial roundwood","m³","Wood production"],"wood|Wood fuel":["Wood: Wood fuel","t","Wood production"],"wood|Sawlogs and veneer logs":["Wood: Sawlogs and veneer logs","m³","Wood production"],"wood|Sawnwood":["Wood: Sawnwood","m³","Wood production"]},
+"thresh":{"pr":200,"tas":19.5,"tasmax":26.5,"tasmin":12.5,"forest_land":500,"planted":250,"woody":800,"tree_cover":265},"p1":[1990,2007],"p2":[2008,2025],
+"series":{
+"pr":[201.13,330.85,346.18,285.81,381.33,224.21,363.36,312.01,261.01,184.58,289.07,331.42,308.02,369.2,295.54,255.24,285.11,259.03,183.77,293.4,223.46,304.65,360.37,278.83,262.47,282.63,298.45,197.63,370.27,380.62,326.59,237.42,277.85,299.11,291.59,182.98],
+"tas":[18.19,18.11,16.63,17.71,18.8,18.2,18.7,17.72,19.13,19.08,18.41,19.22,18.52,18.65,18.47,18.53,18.45,18.69,18.8,18.73,20.32,18.21,19.04,18.81,19.34,19.09,19.19,19.12,19.98,19.31,19.42,19.75,19.23,19.8,19.83,19.93],
+"tasmax":[25.34,24.71,23.32,24.47,25.5,25.06,25.35,24.35,25.95,25.95,25.27,25.96,25.24,25.2,25.24,25.26,25.36,25.64,25.9,25.47,27.33,24.95,25.83,25.72,26.28,26.03,26.26,26.24,26.79,26.09,26.35,26.79,26.04,26.66,26.64,27.05],
+"tasmin":[11.1,11.57,9.97,11,12.15,11.4,12.1,11.13,12.36,12.27,11.6,12.53,11.85,12.15,11.76,11.85,11.59,11.8,11.75,12.05,13.36,11.51,12.3,11.94,12.45,12.21,12.16,12.05,13.21,12.59,12.54,12.76,12.45,12.99,13.06,12.85],
+"forest_land":[450.99,451.968,452.946,453.924,454.902,455.88,456.858,457.836,458.814,459.792,460.77,465.891,471.012,476.133,481.254,486.375,491.496,496.617,501.738,506.859,511.98,515.038,518.096,521.154,524.212,527.27,527.346,527.422,527.498,527.574,527.65,527.682,527.714,527.746,527.778,527.81],
+"planted":[218.15,219.13,220.11,221.08,222.06,223.04,224.02,225,225.97,226.95,227.93,233.05,238.17,243.29,248.41,253.54,258.66,263.78,268.9,274.02,279.14,282.2,285.26,288.31,291.37,294.43,294.51,294.58,294.66,294.73,294.81,294.81,294.81,294.81,294.81,294.81],
+"woody":[null,null,698.33,594.05,605.26,631.59,662.24,674.44,702.67,732.64,763.81,756.69,773.45,789.67,782.55,807.53,830.38,842.78,861.81,885.95,893.11,929.26,937.18,938.09,937.4,932.15,931.81,930.36,930.7,931.65,931.49,944.67,958.21,null,null,null],
+"tree_cover":[null,null,270.59,270.84,271.19,267.15,267.33,267.63,267.84,262.16,262.17,261.89,261.32,260.98,260.52,259.79,260.22,260.82,261.64,262.48,262.48,262.32,262.91,263.65,262.37,263.47,264.5,265.4,268.42,269.77,271.59,271.92,273.67,null,null,null],
+"net_emis":[-1525.3333,-1525.3333,-1525.3333,-1525.3333,-1525.3333,-1525.3333,-1525.3333,-1525.3333,-1525.3333,-1525.3333,-1525.3333,-1697.6667,-1697.6667,-1697.6667,-1697.6667,-1697.6667,-1697.6667,-1697.6667,-1697.6667,-1697.6667,-1697.6667,-1606,-1606,-1606,-1606,-1606,-1378.6667,-1378.6667,-1378.6667,-1378.6667,-1378.6667,-1884.6667,-1884.6667,-1884.6667,-1884.6667,-1884.6667],
+"wood|Roundwood":[null,null,null,null,null,null,null,null,null,null,50400,50400,50400,58100,61419,62105,64347,65200,66100,66962,67893,68047,69608,70505,71428,72380,73099,73834,74585,75353,76138,76941,77760,78599,79455,null],
+"wood|Industrial roundwood":[null,null,null,null,null,null,null,null,null,null,34500,34500,34500,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,39800,null],
+"wood|Wood fuel":[null,null,null,null,null,null,null,null,null,null,15900,15900,15900,18300,21619,22305,24547,25400,26300,27162,28093,28247,29808,30705,31628,32580,33299,34034,34785,35553,36338,37141,37960,38799,39655,null],
+"wood|Sawlogs and veneer logs":[null,null,null,null,null,null,null,null,null,null,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,16000,null],
+"wood|Sawnwood":[null,null,null,null,null,null,null,null,null,null,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,9000,null]}};
+const Y=P.years, M=P.meta, S=P.series;
+const $=id=>document.getElementById(id), keys=Object.keys(M);
+const fmt=(v,d=2)=>v==null?"–":Number(v).toLocaleString(undefined,{maximumFractionDigits:d});
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const lay=(t,y)=>({title:{text:t,font:{size:14}},margin:{t:40,r:15,b:40,l:55},paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{color:css("--tx")},xaxis:{gridcolor:css("--bd")},yaxis:{title:y,gridcolor:css("--bd")},legend:{orientation:"h",y:-.2},hovermode:"x unified"});
+const cfg={responsive:true,displaylogo:false};
+$("src").textContent=P.source||"";
+if(!window.Plotly)throw new Error("Plotly failed to load (check network / docs/vendor/plotly.min.js)");
+if(P.demo)$("demo").innerHTML='<div class="banner"><b>⚠ DEMO DATA.</b> Synthetic placeholder values.</div>';
+// ---------- client-side statistics (mirrors build.py / notebooks) ----------
+function lgam(x){const p=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];if(x<0.5)return Math.log(Math.PI/Math.sin(Math.PI*x))-lgam(1-x);x-=1;let t=p[0];for(let i=1;i<9;i++)t+=p[i]/(x+i);const w=x+7.5;return 0.9189385332046727+(x+0.5)*Math.log(w)-w+Math.log(t);}
+function ibeta(a,b,x){if(x<=0)return 0;if(x>=1)return 1;const bt=Math.exp(lgam(a+b)-lgam(a)-lgam(b)+a*Math.log(x)+b*Math.log(1-x));const cf=(a2,b2,x2)=>{const qab=a2+b2,qap=a2+1,qam=a2-1;let c=1,d=1-qab*x2/qap,h=1-d;for(let m=1;m<=200;m++){const m2=2*m;let dd=m2*(b2-m)*x2/((qam+m2)*(a2+m2));h=1+dd*h;c=1+dd/c;h*=c;dd=-(a2+m)*(qab+m)*x2/((a2+m2)*(qap+m2));h=1+dd*h;c=1+dd/c;const del=h*c;h*=del;if(Math.abs(del-1)<3e-12)break;}return h;};return x<(a+1)/(a+b+2)?bt*cf(a,b,x)/a:1-bt*cf(b,a,1-x)/b;}
+function tP(t,n){return ibeta(n/2,0.5,n/(n+t*t));}
+function stat(a){const p=Y.map((y,i)=>[y,a[i]]).filter(q=>q[1]!=null);const n=p.length;if(n<3)return null;
+ const mx=p.reduce((s,q)=>s+q[0],0)/n,my=p.reduce((s,q)=>s+q[1],0)/n;let sxy=0,sxx=0,syy=0;
+ p.forEach(q=>{sxy+=(q[0]-mx)*(q[1]-my);sxx+=(q[0]-mx)**2;syy+=(q[1]-my)**2;});
+ const b=sxy/sxx,a0=my-b*mx,res=p.map(q=>q[1]-(a0+b*q[0])),s2=res.reduce((s,v)=>s+v*v,0)/(n-2);
+ const pv=tP(Math.abs(b/Math.sqrt(s2/sxx)),n-2),r2=sxy*sxy/(sxx*syy);
+ const first=p[0],last=p[n-1],fv=first[1],lv=last[1];
+ const g=([lo,hi])=>{const q=p.filter(z=>z[0]>=lo&&z[0]<=hi);return q.reduce((s,z)=>s+z[1],0)/q.length;};
+ let mn=p[0],mx2=p[0];p.forEach(q=>{if(q[1]<mn[1])mn=q;if(q[1]>mx2[1])mx2=q;});
+ return{mean:my,min:mn[1],min_y:mn[0],max:mx2[1],max_y:mx2[0],first:fv,first_y:first[0],last:lv,last_y:last[0],
+  pct:fv?(lv-fv)/Math.abs(fv)*100:null,cagr:(fv>0&&lv>0)?((lv/fv)**(1/(last[0]-first[0]))-1)*100:null,
+  slope:b,r2:r2,p:pv,p1:g(P.p1),p2:g(P.p2),p_change:g(P.p1)?(g(P.p2)-g(P.p1))/Math.abs(g(P.p1))*100:null};}
+const ST={};keys.forEach(k=>ST[k]=stat(S[k]));
+function roll(a,w){return a.map((_,i)=>{if(i<w-1)return null;const s=a.slice(i-w+1,i+1);return s.some(v=>v==null)?null:s.reduce((x,y)=>x+y,0)/w})}
+function linfit(x,y){const p=x.map((v,i)=>[v,y[i]]).filter(q=>q[1]!=null),n=p.length;if(n<3)return null;const mx=p.reduce((s,q)=>s+q[0],0)/n,my=p.reduce((s,q)=>s+q[1],0)/n;let sxy=0,sxx=0;p.forEach(q=>{sxy+=(q[0]-mx)*(q[1]-my);sxx+=(q[0]-mx)**2});const b=sxy/sxx;return{b,a:my-b*mx}}
+function pearson(a,b){const p=a.map((v,i)=>[v,b[i]]).filter(q=>q[0]!=null&&q[1]!=null),n=p.length;if(n<5)return[null,n];const mx=p.reduce((s,q)=>s+q[0],0)/n,my=p.reduce((s,q)=>s+q[1],0)/n;let sxy=0,sxx=0,syy=0;p.forEach(q=>{sxy+=(q[0]-mx)*(q[1]-my);sxx+=(q[0]-mx)**2;syy+=(q[1]-my)**2});return[sxx&&syy?sxy/Math.sqrt(sxx*syy):null,n]}
+const diff=a=>a.map((v,i)=>i&&v!=null&&a[i-1]!=null?v-a[i-1]:null);
+const dd={};keys.forEach(k=>dd[k]=diff(S[k]));
+const pairs=[];
+["forest_land","planted","woody","tree_cover","net_emis"].forEach(f=>["tas","tasmax","tasmin","pr"].forEach(c=>{
+ const [r,n]=pearson(S[f],S[c]);if(r==null)return;
+ const rd=pearson(dd[f],dd[c])[0];
+ pairs.push({f,c,r,p:tP(Math.abs(r*Math.sqrt((n-2)/(1-r*r))),n-2),n,rd});}));
+const exceed={},drought=[];
+Object.keys(P.thresh).forEach(k=>{if(!S[k])return;exceed[k]=Y.filter((y,i)=>S[k][i]!=null&&S[k][i]>P.thresh[k]);});
+Y.forEach((y,i)=>{if(S.pr[i]!=null&&S.pr[i]<P.thresh.pr)drought.push(y);});
+// findings (auto-generated from the data)
+const F=[];
+{const t=ST.tas;F.push(`Mean temperature rose by ${(t.slope*10).toFixed(2)} °C per decade over 1990–2025 (R² = ${t.r2.toFixed(2)}, p = ${t.p.toExponential(1)}); the 2008–2025 average is ${(t.p2-t.p1)>=0?"+":""}${(t.p2-t.p1).toFixed(2)} °C vs 1990–2007.`)}
+{const s=ST.pr;F.push(`Precipitation shows no clear monotonic trend (${s.slope.toFixed(2)} mm/yr, p = ${s.p.toFixed(2)}) but is highly variable: driest year ${s.min_y} (${s.min.toFixed(0)} mm); ${drought.length} year(s) below the 200 mm drought threshold (${drought.join(", ")}).`)}
+{const fl=ST.forest_land;F.push(`Forest land area changed ${fl.pct>=0?"+":""}${fl.pct.toFixed(1)}% (${fl.first.toFixed(1)} → ${fl.last.toFixed(1)} thousand ha); planted forest +${ST.planted.pct.toFixed(1)}%; woody crops (1992–2022) +${ST.woody.pct.toFixed(1)}%; tree-covered areas stable (${ST.tree_cover.pct.toFixed(1)}%).`)}
+{const e=ST.net_emis;F.push(`Forestland net emissions are negative throughout (a net sink): mean ${e.mean.toFixed(0)} kt, strongest sink ${e.min_y} (${e.min.toFixed(0)} kt). The series moves in steps — FAO Tier-1 reporting, not annual observation.`)}
+{const top=[...pairs].sort((a,b)=>Math.abs(b.r)-Math.abs(a.r))[0];
+ F.push(`Strongest forest–climate correlation: ${M[top.f][0]} vs ${M[top.c][0]} (r = ${top.r>=0?"+":""}${top.r.toFixed(2)}, n = ${top.n}). After removing trends (year-on-year changes) it is r = ${top.rd.toFixed(2)} — most of the link is shared trend, not year-to-year coupling.`)}
+// KPIs
+const kp=[["tas","Mean temp. change",s=>(s.slope*10).toFixed(2)+" °C/decade","per decade, linear trend"],
+["pr","Driest year",s=>s.min_y,ST.pr?fmt(ST.pr.min,0)+" mm":"–"],
+["forest_land","Forest land change",s=>(s.pct>0?"+":"")+fmt(s.pct,1)+"%",fmt(ST.forest_land.first,0)+" → "+fmt(ST.forest_land.last,0)+" k ha"],
+["net_emis","Forest net emissions",s=>fmt(s.last,0)+" kt","net sink (negative = removal)"],
+["woody","Woody crops change",s=>"+"+fmt(s.pct,0)+"%","1992–2022"]];
+$("kpis").innerHTML=kp.filter(k=>ST[k[0]]).map(k=>`<div class="card kpi"><div class="l">${k[1]}</div><div class="v">${k[2](ST[k[0]])}</div><div class="d">${k[3]}</div></div>`).join("");
+// overview
+function series(key,opt){opt=opt||{};const x=Y.slice(opt.i0||0,opt.i1==null?Y.length:opt.i1+1),a=S[key].slice(opt.i0||0,opt.i1==null?Y.length:opt.i1+1),w=opt.w||10,tr=[];
+ tr.push({x,y:a,name:"Annual",mode:"lines+markers",marker:{size:4},line:{color:"#4a90c2",width:1.5}});
+ tr.push({x,y:roll(a,w),name:w+"-yr rolling mean",mode:"lines",line:{color:"#d64545",width:3}});
+ if(opt.tr!==false){const f=linfit(x,a);if(f)tr.push({x:[x[0],x.at(-1)],y:[f.a+f.b*x[0],f.a+f.b*x.at(-1)],name:"Linear trend",mode:"lines",line:{dash:"dash",color:css("--ac2")}})}
+ const th=P.thresh[key];if(opt.th!==false&&th!=null)tr.push({x:[x[0],x.at(-1)],y:[th,th],name:"Threshold "+th,mode:"lines",line:{dash:"dot",color:css("--tx"),width:1}});return tr}
+$("climgrid").innerHTML=["tas","tasmax","tasmin","pr"].map(k=>`<div class="card"><div id="c_${k}" style="height:300px"></div></div>`).join("");
+["tas","tasmax","tasmin","pr"].forEach(k=>Plotly.newPlot("c_"+k,series(k),lay(M[k][0],M[k][1]),cfg));
+// explorer
+const opts=keys.map(k=>`<option value="${k}">${M[k][0]}</option>`).join("");$("v1").innerHTML=opts;$("v2").innerHTML='<option value="">— none —</option>'+opts;$("v1").value="tas";
+$("y0").min=$("y1").min=Y[0];$("y0").max=$("y1").max=Y.at(-1);$("y0").value=Y[0];$("y1").value=Y.at(-1);
+function rng(){let a=+$("y0").value,b=+$("y1").value;if(a>b)[a,b]=[b,a];$("y0l").textContent=a;$("y1l").textContent=b;return[a,b]}
+function drawExp(){const[a,b]=rng(),i0=Y.indexOf(a),i1=Y.indexOf(b),k=$("v1").value,k2=$("v2").value,w=+$("win").value;
+ const tr=series(k,{i0,i1,w,tr:$("tr").checked,th:$("th").checked});
+ if($("pc").checked&&ST[k]){[[P.p1,ST[k].p1,"#2f9e5b"],[P.p2,ST[k].p2,"#e08a2b"]].forEach(q=>tr.push({x:[q[0][0],q[0][1]],y:[q[1],q[1]],name:q[0].join("–")+" avg",mode:"lines",line:{color:q[2],width:4}}))}
+ const l=lay(M[k][0],M[k][1]);
+ if(k2){tr.push({x:Y.slice(i0,i1+1),y:S[k2].slice(i0,i1+1),name:M[k2][0],yaxis:"y2",mode:"lines",line:{color:"#8a5cc5",width:2}});l.yaxis2={title:M[k2][1],overlaying:"y",side:"right",showgrid:false}}
+ Plotly.newPlot("exp",tr,l,cfg);const s=ST[k];
+ $("expstats").innerHTML=s?`<table><tr><th>Mean</th><th>Min (year)</th><th>Max (year)</th><th>Change</th><th>CAGR</th><th>Trend/yr</th><th>R²</th><th>p</th></tr><tr><td>${fmt(s.mean)}</td><td>${fmt(s.min)} (${s.min_y})</td><td>${fmt(s.max)} (${s.max_y})</td><td>${fmt(s.pct,1)}%</td><td>${s.cagr==null?"–":fmt(s.cagr)+"%"}</td><td>${fmt(s.slope,3)}</td><td>${fmt(s.r2,2)}</td><td>${s.p<0.001?s.p.toExponential(1):fmt(s.p,3)}</td></tr></table><small>Statistics cover the full dataset period; chart follows the selected range.</small>`:""}
+["v1","v2","y0","y1","win","tr","th","pc"].forEach(i=>$(i).addEventListener("input",drawExp));drawExp();
+// correlation
+const fk=["forest_land","planted","woody","tree_cover","net_emis"].filter(k=>S[k]),ck=["tas","tasmax","tasmin","pr"];
+$("sx").innerHTML=$("sy").innerHTML=opts;$("sx").value="tas";$("sy").value="forest_land";
+function drawCorr(){const[a,b]=rng(),i0=Y.indexOf(a),i1=Y.indexOf(b),d=$("dt").checked,g=k=>{const v=S[k].slice(i0,i1+1);return d?diff(v):v};
+ const z=fk.map(f=>ck.map(c=>pearson(g(f),g(c))[0]));
+ Plotly.newPlot("heat",[{z,x:ck.map(c=>M[c][0].split(" (")[0]),y:fk.map(f=>M[f][0]),type:"heatmap",zmin:-1,zmax:1,colorscale:"RdBu",reversescale:true,text:z.map(r=>r.map(v=>v==null?"":v.toFixed(2))),texttemplate:"%{text}",hovertemplate:"r = %{z:.2f}<extra></extra>"}],{...lay("Pearson r — forest vs climate "+(d?"(year-on-year changes)":"("+a+"–"+b+")"),""),margin:{t:40,r:10,b:70,l:150},hovermode:"closest"},cfg);
+ const X=g($("sx").value),Yv=g($("sy").value),pts=X.map((v,i)=>[v,Yv[i],Y[i0+i]]).filter(q=>q[0]!=null&&q[1]!=null),[r,n]=pearson(X,Yv),f=linfit(pts.map(q=>q[0]),pts.map(q=>q[1]));
+ const t=[{x:pts.map(q=>q[0]),y:pts.map(q=>q[1]),text:pts.map(q=>q[2]),mode:"markers",marker:{size:8,color:pts.map(q=>q[2]),colorscale:"Viridis",showscale:true,colorbar:{title:"Year"}},name:"Years",hovertemplate:"%{text}: %{x:.2f}, %{y:.2f}<extra></extra>"}];
+ if(f){const xs=pts.map(q=>q[0]),lo=Math.min(...xs),hi=Math.max(...xs);t.push({x:[lo,hi],y:[f.a+f.b*lo,f.a+f.b*hi],mode:"lines",name:"fit",line:{color:css("--ac2"),dash:"dash"}})}
+ Plotly.newPlot("sc",t,{...lay(`${M[$("sy").value][0]} vs ${M[$("sx").value][0]} — r = ${r==null?"–":r.toFixed(2)} (n=${n})`,M[$("sy").value][1]),xaxis:{title:M[$("sx").value][1],gridcolor:css("--bd")},hovermode:"closest",showlegend:false},cfg)}
+["y0","y1","dt","sx","sy"].forEach(i=>$(i).addEventListener("input",drawCorr));drawCorr();
+// thresholds table
+$("pp").textContent=P.p1.join("–")+" vs "+P.p2.join("–");
+$("thtab").innerHTML="<table><tr><th>Variable</th><th>Avg "+P.p1.join("–")+"</th><th>Avg "+P.p2.join("–")+"</th><th>Change</th><th>Threshold</th><th>Years above threshold</th></tr>"+
+ Object.keys(P.thresh).filter(k=>ST[k]).map(k=>{const s=ST[k],ex=(exceed[k]||[]),dr=k=="pr"?drought:null;
+  return`<tr><td>${M[k][0]}</td><td>${fmt(s.p1)}</td><td>${fmt(s.p2)}</td><td>${s.p_change==null?"–":(s.p_change>0?"+":"")+fmt(s.p_change,1)+"%"}</td><td>${P.thresh[k]} ${M[k][1]}${k=="pr"?" (drought if below)":""}</td><td>${k=="pr"?(dr.length?dr.join(", ")+" (below)":"none"):(ex.length>8?ex.length+" yrs, first "+ex[0]+", last "+ex.at(-1):ex.join(", ")||"none")}</td></tr>`}).join("")+"</table>";
+// wood
+const wk=keys.filter(k=>k.startsWith("wood|"));$("wsel").innerHTML=wk.map(k=>`<option value="${k}">${M[k][0]}</option>`).join("");
+function drawWood(){const k=$("wsel").value;if(!k){$("wnote").textContent="No wood-production data loaded.";return}
+ const idx=Y.map((_,i)=>i).filter(i=>S[k][i]!=null),x=idx.map(i=>Y[i]),y=idx.map(i=>S[k][i]);
+ Plotly.newPlot("wchart",[{x,y,type:"bar",name:"Production",marker:{color:css("--ac")}},{x,y:roll(y,5),mode:"lines",name:"5-yr mean",line:{color:"#d64545",width:3}}],lay(M[k][0]+" — Syria",M[k][1]),cfg);
+ const s=ST[k];$("wnote").textContent=s?`Change ${fmt(s.pct,1)}% (${s.first_y}→${s.last_y}); peak ${fmt(s.max,0)} in ${s.max_y}; trend ${fmt(s.slope,1)} per year (R² ${fmt(s.r2,2)}).`:""}
+$("wsel").addEventListener("input",drawWood);drawWood();
+// findings
+$("finds").innerHTML=F.map(f=>`<li>${f}</li>`).join("");
+const best=[...pairs].sort((a,b)=>Math.abs(b.r)-Math.abs(a.r))[0];
+$("ans").textContent=best?`Forest and climate series are statistically related mainly through shared long-term trends (strongest raw r = ${best.r.toFixed(2)}); the detrended year-on-year link is r = ${best.rd.toFixed(2)}. The evidence supports "moderate-to-strong trend association, weak year-to-year coupling" — not a proven causal link.`:"Not enough data.";
+</script></body></html>
