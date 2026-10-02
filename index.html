@@ -28,7 +28,7 @@ footer{border-top:1px solid var(--bd);padding:24px 20px;text-align:center;color:
 a{color:var(--ac)}.fig{max-width:100%;border-radius:10px;border:1px solid var(--bd)}
 code{background:var(--bd);border-radius:6px;padding:1px 6px;font-size:13px}
 </style></head><body>
-<nav><b>🌲 Syria ForestWatch</b><a href="#problem">Problem</a><a href="#data">Data</a><a href="#overview">Overview</a><a href="#analysis">Notebook analysis</a><a href="#explorer">Explorer</a><a href="#corr">Correlation</a><a href="#thresh">Thresholds</a><a href="#wood">Wood</a><a href="#findings">Findings</a><a href="#solution">Solution</a><a href="#limits">Limitations</a><a href="#checklist">Checklist</a><a href="#refs">References</a></nav>
+<nav><b>🌲 Syria ForestWatch</b><a href="#problem">Problem</a><a href="#data">Data</a><a href="#overview">Overview</a><a href="#analysis">Notebook analysis</a><a href="#explorer">Explorer</a><a href="#corr">Correlation</a><a href="#thresh">Thresholds</a><a href="#wood">Wood</a><a href="#findings">Findings</a><a href="#solution">Solution</a><a href="#limits">Limitations</a><a href="#refs">References</a></nav>
 <header>
 <p class="tag">FTL AI4Climate · Python for Climate Hackathon · Group 3</p>
 <h1>Assessing the Interplay Between Forestry Dynamics and Climate Change in Syria (1990–2025)</h1>
@@ -108,21 +108,8 @@ code{background:var(--bd);border-radius:6px;padding:1px 6px;font-size:13px}
 <li><b>Conflict-period data quality.</b> Statistics for 2011 onwards may rely on estimates.</li>
 <li><b>Next:</b> sub-national climate data, satellite tree-cover loss, fire data, lagged and multivariate models, forecasting.</li></ul></div></section>
 
-<section id="checklist"><h2>11 · Hackathon requirements checklist</h2><div class="card scroll"><table>
-<tr><th>Requirement</th><th>Where it is covered</th><th></th></tr>
-<tr><td>Problem statement &amp; one research question</td><td>§1</td><td class="ok">✔</td></tr>
-<tr><td>Credible, referenced datasets</td><td>§2, References</td><td class="ok">✔</td></tr>
-<tr><td>Python: variables, functions, loops, conditions</td><td><code>build.py</code>, notebooks</td><td class="ok">✔</td></tr>
-<tr><td>Import, inspect, clean/prepare, explain variables</td><td>§2, <code>build.py</code> steps 1–2</td><td class="ok">✔</td></tr>
-<tr><td>≥ 3 analyses (averages, min/max, % change, period comparison, thresholds, correlation, ranking)</td><td>§3–§7 (all of them)</td><td class="ok">✔</td></tr>
-<tr><td>Visualisation</td><td>Interactive Plotly + matplotlib notebook figures</td><td class="ok">✔</td></tr>
-<tr><td>Findings &amp; interpretation</td><td>§8</td><td class="ok">✔</td></tr>
-<tr><td>Proposed solution / impact</td><td>§9</td><td class="ok">✔</td></tr>
-<tr><td>Limitations &amp; next steps</td><td>§10</td><td class="ok">✔</td></tr>
-<tr><td>Live API with authentication handling + fallback</td><td><code>build.py</code> (JWT Bearer token, cache, local fallback)</td><td class="ok">✔</td></tr>
-<tr><td>Submit: notebook, dataset link, ≤ 7 slides, short summary, Colab/GitHub link</td><td>Repo + this page</td><td class="ok">✔</td></tr></table></div></section>
 
-<section id="refs"><h2>12 · References</h2><div class="card"><ol>
+<section id="refs"><h2>11 · References</h2><div class="card"><ol>
 <li>Harris, I., Osborn, T.J., Jones, P., Lister, D. (2020). Version 4 of the CRU TS monthly high-resolution gridded multivariate climate dataset. <i>Scientific Data</i> 7, 109.</li>
 <li>World Bank Climate Change Knowledge Portal — CRU TS country time-series, Syrian Arab Republic. <a href="https://climateknowledgeportal.worldbank.org">climateknowledgeportal.worldbank.org</a></li>
 <li>FAO. FAOSTAT: Land Use; Land Cover; Emissions from Forests; Forestry Production and Trade. <a href="https://www.fao.org/faostat/">fao.org/faostat</a> (API access requires a free FAOSTAT account — see build.py).</li>
